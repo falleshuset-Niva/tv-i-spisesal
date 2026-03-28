@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fælleshus TV</title>
+
+<style>
+body { margin:0; background:black; color:white; font-family:Arial; overflow:hidden; }
+
+#video { width:100%; height:80vh; border:none; }
+
+#topbar {
+  height:50px;
+  background:#000000cc;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:0 20px;
+  font-size:20px;
+}
+
+#menu {
+  position:absolute;
+  left:10px;
+  top:60px;
+  background:#111;
+  padding:10px;
+  border-radius:10px;
+}
+
+.menuBtn {
+  display:block;
+  margin:5px 0;
+  padding:8px;
+  background:#333;
+  border:none;
+  color:white;
+  cursor:pointer;
+}
+
+#ticker {
+  height:15vh;
+  background:#111;
+  font-size:32px;
+  display:flex;
+  align-items:center;
+  overflow:hidden;
+}
+
+#ticker span {
+  white-space:nowrap;
+  animation: scroll 30s linear infinite;
+}
+
+@keyframes scroll {
+  from { transform:translateX(100%); }
+  to { transform:translateX(-100%); }
+}
+</style>
+</head>
+
+<body>
+
+<div id="topbar">
+  <div id="clock"></div>
+  <div>Fælleshuset</div>
+</div>
+
+<div id="menu"></div>
+
+<iframe id="video"></iframe>
+
+<div id="ticker"><span id="text"></span></div>
+
+<script>
+const sheetURL = "INDSÆT_DIT_CSV_LINK_HER";
+
+let data = [];
+let index = 0;
+let videos = [];
+
+async function loadData() {
+  const res = await fetch(sheetURL);
+  const text = await res.text();
+
+  data = text.split("\\n").slice(1).map(r => r.split(","));
+
+  videos = data.filter(r => r[0] === "video" || r[0] === "tv");
+
+  buildMenu();
+  startLoop();
+}
+
+function buildMenu() {
+  const menu = document.getElementById("menu");
+
+  videos.forEach((v, i) => {
+    let btn = document.createElement("button");
+    btn.className = "menuBtn";
+    btn.innerText = v[1];
+    btn.onclick = () => playVideo(i);
+    menu.appendChild(btn);
+  });
+}
+
+function playVideo(i) {
+  let link = videos[i][2];
+
+  if (link.includes("youtube")) {
+    let id = link.split("v=")[1]?.split("&")[0];
+    document.getElementById("video").src =
+      "https://www.youtube.com/embed/" + id + "?autoplay=1&mute=1";
+  } else {
+    document.getElementById("video").src = link;
+  }
+}
+
+function startLoop() {
+  setInterval(() => {
+    let row = data[index];
+
+    if (!row) return;
+
+    if (row[0] === "info" || row[0] === "event") {
+      document.getElementById("text").innerText = row[1];
+    }
+
+    if (row[0] === "video" || row[0] === "tv") {
+      playVideo(videos.indexOf(row));
+    }
+
+    index = (index + 1) % data.length;
+  }, 20000);
+}
+
+// ur + dato
+setInterval(() => {
+  const now = new Date();
+  document.getElementById("clock").innerText =
+    now.toLocaleTimeString("da-DK") + " | " +
+    now.toLocaleDateString("da-DK");
+}, 1000);
+
+loadData();
+</script>
+
+</body>
+</html>
